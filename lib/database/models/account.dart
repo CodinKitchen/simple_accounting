@@ -13,9 +13,14 @@ class Account {
     required this.category,
   });
 
-  // Convert a Dog into a Map. The keys must correspond to the names of the
-  // columns in the database.
-  Map<String, dynamic> toMap() {
+  factory Account.fromDatabase(Map<String, dynamic> data) => Account(
+        id: data['id'],
+        name: data['name'],
+        code: data['code'],
+        category: AccountCategory(id: data['category_id']),
+      );
+
+  Map<String, dynamic> toDatabase() {
     return {
       'id': id,
       'name': name,

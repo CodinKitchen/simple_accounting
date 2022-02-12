@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:simple_accouting/pages/accounts.dart';
+import 'package:simple_accouting/pages/accounts/index.dart';
 import 'package:simple_accouting/pages/operations.dart';
 import 'package:simple_accouting/pages/profile.dart';
 
