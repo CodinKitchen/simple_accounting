@@ -3,10 +3,13 @@ import 'package:sqflite_common/sqlite_api.dart';
 class Migration06022022 {
   static Future<void> up(Database database) async {
     await database.execute("""
-        CREATE TABLE account_categories (
+        CREATE TABLE profile (
           id INTEGER PRIMARY KEY,
-          name TEXT NOT NULL,
-          code TEXT NOT NULL
+          first_name TEXT,
+          last_name TEXT,
+          bank_iban TEXT,
+          bank_name TEXT,
+          initial_balance REAL
         )
     """);
 
@@ -15,8 +18,8 @@ class Migration06022022 {
           id INTEGER PRIMARY KEY,
           name TEXT NOT NULL,
           code TEXT NOT NULL,
-          account_category_id INTEGER NOT NULL,
-          FOREIGN KEY(account_category_id) REFERENCES account_categories(id)
+          profile_id INTEGER NOT NULL,
+          FOREIGN KEY(profile_id) REFERENCES profile(id)
         )
     """);
 
@@ -26,7 +29,9 @@ class Migration06022022 {
           amount DOUBLE NOT NULL,
           date DATE NOT NULL DEFAULT CURRENT_DATE,
           account_id INTEGER NOT NULL,
-          FOREIGN KEY(account_id) REFERENCES accounts(id)
+          profile_id INTEGER NOT NULL,
+          FOREIGN KEY(account_id) REFERENCES accounts(id),
+          FOREIGN KEY(profile_id) REFERENCES profile(id)
         )
     """);
   }

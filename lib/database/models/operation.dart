@@ -25,7 +25,7 @@ class Operation {
       'id': id,
       'amount': amount,
       'date': DateFormat('yyyy-MM-dd').format(date),
-      // 'account_id': account?.id,
+      'account_id': account?.id,
     };
   }
 }

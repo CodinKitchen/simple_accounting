@@ -30,8 +30,7 @@ class MyApp extends StatelessWidget {
       ),
       supportedLocales: const [Locale('fr')],
       localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
+        ...GlobalMaterialLocalizations.delegates,
         FormBuilderLocalizations.delegate,
       ],
       home: const ProfilePage(),
