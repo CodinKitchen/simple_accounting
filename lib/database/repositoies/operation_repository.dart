@@ -21,4 +21,13 @@ class OperationRepository {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  static void remove(Operation operation) async {
+    final database = await DBHelper.database();
+    database.delete(
+      Operation.table,
+      where: 'id = ?',
+      whereArgs: [operation.id],
+    );
+  }
 }

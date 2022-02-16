@@ -3,12 +3,10 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_extra_fields/form_builder_extra_fields.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:intl/intl.dart';
-import 'package:simple_accouting/database/db_helper.dart';
 import 'package:simple_accouting/database/models/account.dart';
 import 'package:simple_accouting/database/models/operation.dart';
 import 'package:simple_accouting/database/repositoies/account_repository.dart';
 import 'package:simple_accouting/database/repositoies/operation_repository.dart';
-import 'package:sqflite_common/sql.dart' show ConflictAlgorithm;
 import '../menu.dart';
 
 class OperationsPage extends StatefulWidget {
@@ -32,17 +30,19 @@ class _OperationsPageState extends State<OperationsPage> {
       operation.date = formState.fields['date']?.value;
       operation.account = formState.fields['account']?.value;
       operation.profile = 1;
-      final database = await DBHelper.database();
-      database.insert(
-        'operations',
-        operation.toDatabase(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      OperationRepository.save(operation);
       setState(() {
         _operationWidgets = OperationRepository.all();
       });
     }
     Navigator.pop(context, 'Saved');
+  }
+
+  void onDelete(Operation operation) async {
+    OperationRepository.remove(operation);
+    setState(() {
+      _operationWidgets = OperationRepository.all();
+    });
   }
 
   @override
@@ -100,8 +100,12 @@ class _OperationsPageState extends State<OperationsPage> {
                                               labelText: 'Montant',
                                             ),
                                             validator:
-                                                FormBuilderValidators.required(
-                                                    context),
+                                                FormBuilderValidators.compose([
+                                              FormBuilderValidators.required(
+                                                  context),
+                                              FormBuilderValidators.numeric(
+                                                  context)
+                                            ]),
                                             keyboardType: TextInputType.text,
                                           ),
                                           FormBuilderDateTimePicker(
@@ -166,6 +170,10 @@ class _OperationsPageState extends State<OperationsPage> {
                                   " - " +
                                   DateFormat('yyyy-MM-dd')
                                       .format(operationDate)),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () => onDelete(operation),
+                              ),
                             );
                           }));
                 } else if (snapshot.hasError) {

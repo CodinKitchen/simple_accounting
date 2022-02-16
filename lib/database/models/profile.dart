@@ -1,5 +1,5 @@
 class Profile {
-  static const String table = 'profile';
+  static const String table = 'profiles';
 
   final int? id;
   String? firstName;

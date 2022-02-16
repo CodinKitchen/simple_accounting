@@ -15,9 +15,12 @@ class DBHelper {
     return await databaseFactory.openDatabase(
         join(databasePath.path, "simple_accounting.db"),
         options: OpenDatabaseOptions(
-            version: 1,
-            onCreate: (Database database, int version) async {
-              Migration06022022.up(database);
-            }));
+          version: 1,
+          onCreate: (Database database, int version) async {
+            Migration06022022.up(database);
+          },
+          onOpen: (Database database) =>
+              database.execute("PRAGMA foreign_keys = ON"),
+        ));
   }
 }

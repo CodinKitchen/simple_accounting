@@ -19,4 +19,13 @@ class AccountRepository {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  static void remove(Account account) async {
+    final database = await DBHelper.database();
+    database.delete(
+      Account.table,
+      where: 'id = ?',
+      whereArgs: [account.id],
+    );
+  }
 }

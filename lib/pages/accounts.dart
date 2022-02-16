@@ -1,18 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:simple_accouting/database/db_helper.dart';
 import 'package:simple_accouting/database/models/account.dart';
+import 'package:simple_accouting/database/repositoies/account_repository.dart';
 import 'package:simple_accouting/menu.dart';
-import 'package:sqflite_common/sql.dart' show ConflictAlgorithm;
-
-Future<List<Account>> _loadAccounts() async {
-  final database = await DBHelper.database();
-  final result = await database.query('accounts');
-  return result.isNotEmpty
-      ? result.map((item) => Account.fromDatabase(item)).toList()
-      : [];
-}
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class AccountsPage extends StatefulWidget {
   const AccountsPage({Key? key}) : super(key: key);
@@ -33,23 +25,29 @@ class _AccountsPageState extends State<AccountsPage> {
       account.name = formState.fields['name']?.value;
       account.code = formState.fields['code']?.value;
       account.profile = 1;
-      final database = await DBHelper.database();
-      database.insert(
-        'accounts',
-        account.toDatabase(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      AccountRepository.save(account);
       setState(() {
-        _accounts = _loadAccounts();
+        _accounts = AccountRepository.all();
       });
     }
     Navigator.pop(context, 'Saved');
   }
 
+  void onDelete(Account account) async {
+    try {
+      AccountRepository.remove(account);
+    } catch (e) {
+      print("Can't delete");
+    }
+    setState(() {
+      _accounts = AccountRepository.all();
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    _accounts = _loadAccounts();
+    _accounts = AccountRepository.all();
   }
 
   @override
@@ -160,6 +158,10 @@ class _AccountsPageState extends State<AccountsPage> {
                             return ListTile(
                               title: Text(account.name.toString()),
                               subtitle: Text(account.code.toString()),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () => onDelete(account),
+                              ),
                             );
                           }));
                 } else if (snapshot.hasError) {
