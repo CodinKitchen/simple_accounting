@@ -1,18 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:simple_accouting/database/db_helper.dart';
 import 'package:simple_accouting/database/models/profile.dart';
+import 'package:simple_accouting/database/repositoies/profile_repository.dart';
 import '../menu.dart';
-import 'package:sqflite_common/sql.dart' show ConflictAlgorithm;
-
-Future<Profile> _loadProfile() async {
-  final database = await DBHelper.database();
-  final result =
-      await database.query('profile', where: 'id = ?', whereArgs: [1]);
-
-  return result.isNotEmpty ? Profile.fromDatabase(result.first) : Profile();
-}
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -28,7 +19,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    _loadProfile().then((profile) {
+    ProfileRepository.loadProfile().then((profile) {
       _profile = profile;
       _formKey.currentState?.patchValue({
         'firstName': _profile.firstName,
@@ -50,14 +41,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _profile.bankName = formState.fields['bankName']?.value;
       _profile.initialBalance =
           double.parse(formState.fields['initialBalance']?.value);
-      final database = await DBHelper.database();
-      database.insert(
-        'profile',
-        _profile.toDatabase(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    } else {
-      print("Erreur de validation");
+      ProfileRepository.save(_profile);
     }
   }
 
@@ -67,7 +51,7 @@ class _ProfilePageState extends State<ProfilePage> {
       appBar: AppBar(
         // Here we take the value from the SimpleAccounting object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: const Text('Simple accounting - Profil'),
+        title: const Text('Simple accounting - Votre profil'),
       ),
       drawer: const Menu(),
       body: Padding(

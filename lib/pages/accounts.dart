@@ -1,45 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:form_builder_extra_fields/form_builder_extra_fields.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:intl/intl.dart';
 import 'package:simple_accouting/database/db_helper.dart';
 import 'package:simple_accouting/database/models/account.dart';
-import 'package:simple_accouting/database/models/operation.dart';
-import 'package:simple_accouting/database/repositoies/account_repository.dart';
-import 'package:simple_accouting/database/repositoies/operation_repository.dart';
+import 'package:simple_accouting/menu.dart';
 import 'package:sqflite_common/sql.dart' show ConflictAlgorithm;
-import '../menu.dart';
 
-class OperationsPage extends StatefulWidget {
-  const OperationsPage({Key? key}) : super(key: key);
-
-  @override
-  _OperationsPageState createState() => _OperationsPageState();
+Future<List<Account>> _loadAccounts() async {
+  final database = await DBHelper.database();
+  final result = await database.query('accounts');
+  return result.isNotEmpty
+      ? result.map((item) => Account.fromDatabase(item)).toList()
+      : [];
 }
 
-class _OperationsPageState extends State<OperationsPage> {
-  late Future<List<Operation>> _operationWidgets;
-  late List<Account> _accounts;
+class AccountsPage extends StatefulWidget {
+  const AccountsPage({Key? key}) : super(key: key);
+
+  @override
+  _AccountsPageState createState() => _AccountsPageState();
+}
+
+class _AccountsPageState extends State<AccountsPage> {
+  late Future<List<Account>> _accounts;
   final _formKey = GlobalKey<FormBuilderState>();
 
   void onSave() async {
     FormBuilderState? formState = _formKey.currentState;
     formState?.save();
     if (formState != null && formState.validate()) {
-      Operation operation = Operation();
-      operation.amount = double.parse(formState.fields['amount']?.value);
-      operation.date = formState.fields['date']?.value;
-      operation.account = formState.fields['account']?.value;
-      operation.profile = 1;
+      Account account = Account();
+      account.name = formState.fields['name']?.value;
+      account.code = formState.fields['code']?.value;
+      account.profile = 1;
       final database = await DBHelper.database();
       database.insert(
-        'operations',
-        operation.toDatabase(),
+        'accounts',
+        account.toDatabase(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       setState(() {
-        _operationWidgets = OperationRepository.all();
+        _accounts = _loadAccounts();
       });
     }
     Navigator.pop(context, 'Saved');
@@ -48,8 +49,7 @@ class _OperationsPageState extends State<OperationsPage> {
   @override
   void initState() {
     super.initState();
-    _operationWidgets = OperationRepository.all();
-    AccountRepository.all().then((accounts) => _accounts = accounts);
+    _accounts = _loadAccounts();
   }
 
   @override
@@ -58,7 +58,7 @@ class _OperationsPageState extends State<OperationsPage> {
       appBar: AppBar(
         // Here we take the value from the SimpleAccounting object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: const Text('Simple accounting - Vos opérations'),
+        title: const Text('Simple accounting - Vos comptes'),
       ),
       drawer: const Menu(),
       body: Padding(
@@ -74,7 +74,8 @@ class _OperationsPageState extends State<OperationsPage> {
                       onPressed: () => showDialog<String>(
                             context: context,
                             builder: (BuildContext context) => AlertDialog(
-                              title: const Text('Ajouter une opération'),
+                              title:
+                                  const Text('Ajouter une catégorie de compte'),
                               shape: const RoundedRectangleBorder(
                                   borderRadius:
                                       BorderRadius.all(Radius.circular(10.0))),
@@ -95,32 +96,31 @@ class _OperationsPageState extends State<OperationsPage> {
                                       child: Column(
                                         children: <Widget>[
                                           FormBuilderTextField(
-                                            name: 'amount',
+                                            name: 'name',
                                             decoration: const InputDecoration(
-                                              labelText: 'Montant',
+                                              labelText: 'Nom',
                                             ),
                                             validator:
                                                 FormBuilderValidators.required(
                                                     context),
                                             keyboardType: TextInputType.text,
                                           ),
-                                          FormBuilderDateTimePicker(
-                                            name: 'date',
-                                            inputType: InputType.date,
+                                          FormBuilderTextField(
+                                            name: 'code',
                                             decoration: const InputDecoration(
-                                              labelText: 'Date de l\'opération',
+                                              labelText: 'Code',
                                             ),
                                             validator:
-                                                FormBuilderValidators.required(
-                                                    context),
+                                                FormBuilderValidators.compose([
+                                              FormBuilderValidators.required(
+                                                  context),
+                                              FormBuilderValidators.match(
+                                                  context, '^[A-Z]{3}\$',
+                                                  errorText:
+                                                      'Saisissez 3 majuscules')
+                                            ]),
+                                            keyboardType: TextInputType.text,
                                           ),
-                                          FormBuilderSearchableDropdown(
-                                            name: 'account',
-                                            items: _accounts,
-                                            decoration: const InputDecoration(
-                                                labelText:
-                                                    'Searchable Dropdown'),
-                                          )
                                         ],
                                       ),
                                     ),
@@ -143,10 +143,10 @@ class _OperationsPageState extends State<OperationsPage> {
                       child: const Icon(Icons.add))),
             ),
             FutureBuilder(
-              future: _operationWidgets,
+              future: _accounts,
               builder: (BuildContext context, AsyncSnapshot snapshot) {
                 if (snapshot.hasData) {
-                  List<Operation> operations = snapshot.data;
+                  List<Account> accounts = snapshot.data;
                   return Expanded(
                       child: ListView.separated(
                           separatorBuilder: (context, index) => const Divider(
@@ -154,18 +154,12 @@ class _OperationsPageState extends State<OperationsPage> {
                               ),
                           scrollDirection: Axis.vertical,
                           shrinkWrap: true,
-                          itemCount: operations.length,
+                          itemCount: accounts.length,
                           itemBuilder: (context, index) {
-                            Operation operation = operations[index];
-                            final operationDate =
-                                operation.date ?? DateTime.now();
+                            Account account = accounts[index];
                             return ListTile(
-                              title: Text(operation.account.toString()),
-                              subtitle: Text(operation.amount.toString() +
-                                  "€" +
-                                  " - " +
-                                  DateFormat('yyyy-MM-dd')
-                                      .format(operationDate)),
+                              title: Text(account.name.toString()),
+                              subtitle: Text(account.code.toString()),
                             );
                           }));
                 } else if (snapshot.hasError) {

@@ -2,15 +2,19 @@ import 'package:intl/intl.dart';
 import 'package:simple_accouting/database/models/account.dart';
 
 class Operation {
+  static const String table = 'operations';
+
   final int? id;
-  final double amount;
-  final DateTime date;
-  final Account? account;
+  double? amount;
+  DateTime? date;
+  int? profile;
+  Account? account;
 
   Operation({
     this.id,
-    required this.amount,
-    required this.date,
+    this.amount,
+    this.date,
+    this.profile,
     this.account,
   });
 
@@ -18,13 +22,17 @@ class Operation {
         id: data['id'],
         amount: data['amount'],
         date: DateTime.parse(data['date']),
+        profile: data['profile_id'],
+        account: Account(
+            id: data['account_id'], code: data['code'], name: data['name']),
       );
 
   Map<String, dynamic> toDatabase() {
     return {
       'id': id,
       'amount': amount,
-      'date': DateFormat('yyyy-MM-dd').format(date),
+      'date': DateFormat('yyyy-MM-dd').format(date ?? DateTime.now()),
+      'profile_id': profile,
       'account_id': account?.id,
     };
   }
