@@ -29,6 +29,10 @@ jobs:
          sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
       - run: flutter config --enable-linux-desktop
       - run: flutter build linux
+      - uses: actions/upload-artifact@v2
+        with:
+          name: linux_64
+          path: build/linux/x64/release/bundle/
   build-macos:
     runs-on: macos-latest
     steps:
@@ -39,6 +43,10 @@ jobs:
           channel: 'stable'
       - run: flutter config --enable-macos-desktop
       - run: flutter build macos
+      - uses: actions/upload-artifact@v2
+        with:
+          name: macos
+          path: build/macos/Build/Products/Release
   build-windows:
    runs-on: windows-latest
    steps:
@@ -49,3 +57,7 @@ jobs:
           channel: 'stable'
      - run: flutter config --enable-windows-desktop
      - run: flutter build windows
+     - uses: actions/upload-artifact@v2
+       with:
+          name: windows_64
+          path: build/windows/runner/Release/
