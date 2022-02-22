@@ -43,6 +43,7 @@ dependencies:
   form_builder_validators: ^7.4.0
   form_builder_extra_fields: ^7.1.0
   intl_utils: ^2.6.1
+  pdf: ^3.7.1
 
 dev_dependencies:
   flutter_test:

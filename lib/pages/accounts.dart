@@ -35,9 +35,30 @@ class _AccountsPageState extends State<AccountsPage> {
 
   void onDelete(Account account) async {
     try {
-      AccountRepository.remove(account);
+      await AccountRepository.remove(account);
     } catch (e) {
-      print("Can't delete");
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false, // user must tap button!
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text(
+              'Vous ne pouvez pas supprimer ce compte',
+              style: TextStyle(color: Colors.red),
+            ),
+            content: const Text(
+                'Ce compte est associé à des opérations, il ne peut pas être supprimé.'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Fermer'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
     }
     setState(() {
       _accounts = AccountRepository.all();

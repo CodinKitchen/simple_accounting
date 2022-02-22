@@ -1,8 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_extra_fields/form_builder_extra_fields.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:simple_accouting/database/models/account.dart';
 import 'package:simple_accouting/database/models/operation.dart';
 import 'package:simple_accouting/database/repositoies/account_repository.dart';
@@ -19,10 +24,16 @@ class OperationsPage extends StatefulWidget {
 class _OperationsPageState extends State<OperationsPage> {
   late Future<List<Operation>> _operationWidgets;
   late List<Account> _accounts;
-  final _formKey = GlobalKey<FormBuilderState>();
+  DateTime? _dateFrom =
+      DateTime.utc(DateTime.now().year, DateTime.now().month, 1);
+  DateTime? _dateTo =
+      DateTime.utc(DateTime.now().year, DateTime.now().month + 1, 1)
+          .add(const Duration(days: -1));
+  final _editFormKey = GlobalKey<FormBuilderState>();
+  final _datesFormKey = GlobalKey<FormBuilderState>();
 
   void onSave() async {
-    FormBuilderState? formState = _formKey.currentState;
+    FormBuilderState? formState = _editFormKey.currentState;
     formState?.save();
     if (formState != null && formState.validate()) {
       Operation operation = Operation();
@@ -32,7 +43,7 @@ class _OperationsPageState extends State<OperationsPage> {
       operation.profile = 1;
       OperationRepository.save(operation);
       setState(() {
-        _operationWidgets = OperationRepository.all();
+        _operationWidgets = OperationRepository.allByDates(_dateFrom, _dateTo);
       });
     }
     Navigator.pop(context, 'Saved');
@@ -41,14 +52,14 @@ class _OperationsPageState extends State<OperationsPage> {
   void onDelete(Operation operation) async {
     OperationRepository.remove(operation);
     setState(() {
-      _operationWidgets = OperationRepository.all();
+      _operationWidgets = OperationRepository.allByDates(_dateFrom, _dateTo);
     });
   }
 
   @override
   void initState() {
     super.initState();
-    _operationWidgets = OperationRepository.all();
+    _operationWidgets = OperationRepository.allByDates(_dateFrom, _dateTo);
     AccountRepository.all().then((accounts) => _accounts = accounts);
   }
 
@@ -69,82 +80,183 @@ class _OperationsPageState extends State<OperationsPage> {
             SizedBox(
               height: 50,
               child: Align(
-                  alignment: Alignment.topRight,
-                  child: ElevatedButton(
-                      onPressed: () => showDialog<String>(
-                            context: context,
-                            builder: (BuildContext context) => AlertDialog(
-                              title: const Text('Ajouter une opération'),
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(10.0))),
-                              content: Builder(
-                                builder: (context) {
-                                  // Get available height and width of the build area of this widget. Make a choice depending on the size.
-                                  var height =
-                                      MediaQuery.of(context).size.height;
-                                  var width = MediaQuery.of(context).size.width;
+                alignment: Alignment.topRight,
+                child: Row(children: [
+                  Expanded(
+                    child: Container(),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => showDialog<String>(
+                      context: context,
+                      builder: (BuildContext context) => AlertDialog(
+                        title: const Text('Ajouter une opération'),
+                        shape: const RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(10.0))),
+                        content: Builder(
+                          builder: (context) {
+                            // Get available height and width of the build area of this widget. Make a choice depending on the size.
+                            var height = MediaQuery.of(context).size.height;
+                            var width = MediaQuery.of(context).size.width;
 
-                                  return SizedBox(
-                                    height: height - 400,
-                                    width: width - 400,
-                                    child: FormBuilder(
-                                      key: _formKey,
-                                      autovalidateMode:
-                                          AutovalidateMode.onUserInteraction,
-                                      child: Column(
-                                        children: <Widget>[
-                                          FormBuilderTextField(
-                                            name: 'amount',
-                                            decoration: const InputDecoration(
-                                              labelText: 'Montant',
-                                            ),
-                                            validator:
-                                                FormBuilderValidators.compose([
-                                              FormBuilderValidators.required(
-                                                  context),
-                                              FormBuilderValidators.numeric(
-                                                  context)
-                                            ]),
-                                            keyboardType: TextInputType.text,
-                                          ),
-                                          FormBuilderDateTimePicker(
-                                            name: 'date',
-                                            inputType: InputType.date,
-                                            decoration: const InputDecoration(
-                                              labelText: 'Date de l\'opération',
-                                            ),
-                                            validator:
-                                                FormBuilderValidators.required(
-                                                    context),
-                                          ),
-                                          FormBuilderSearchableDropdown(
-                                            name: 'account',
-                                            items: _accounts,
-                                            decoration: const InputDecoration(
-                                                labelText:
-                                                    'Searchable Dropdown'),
-                                          )
-                                        ],
+                            return SizedBox(
+                              height: height - 400,
+                              width: width - 400,
+                              child: FormBuilder(
+                                key: _editFormKey,
+                                autovalidateMode:
+                                    AutovalidateMode.onUserInteraction,
+                                child: Column(
+                                  children: <Widget>[
+                                    FormBuilderTextField(
+                                      name: 'amount',
+                                      decoration: const InputDecoration(
+                                        labelText: 'Montant',
                                       ),
+                                      validator: FormBuilderValidators.compose([
+                                        FormBuilderValidators.required(context),
+                                        FormBuilderValidators.numeric(context)
+                                      ]),
+                                      keyboardType: TextInputType.text,
                                     ),
-                                  );
+                                    FormBuilderDateTimePicker(
+                                      name: 'date',
+                                      inputType: InputType.date,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Date de l\'opération',
+                                      ),
+                                      validator: FormBuilderValidators.required(
+                                          context),
+                                    ),
+                                    FormBuilderSearchableDropdown(
+                                      name: 'account',
+                                      items: _accounts,
+                                      decoration: const InputDecoration(
+                                          labelText: 'Searchable Dropdown'),
+                                    )
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        actions: <Widget>[
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, 'Cancel'),
+                            child: const Text('Annuler'),
+                          ),
+                          TextButton(
+                            onPressed: onSave,
+                            child: const Text('Enregistrer'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    child: const Icon(Icons.add),
+                  ),
+                  const SizedBox(
+                    width: 20,
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final pdf = pw.Document();
+
+                      pdf.addPage(pw.Page(
+                          pageFormat: PdfPageFormat.a4,
+                          build: (pw.Context context) {
+                            return pw.Center(
+                              child: pw.Text("Hello World"),
+                            );
+                          }));
+                      final documentsPath =
+                          await getApplicationDocumentsDirectory();
+                      final file = File(documentsPath.path + "/grand_live.pdf");
+                      await file.writeAsBytes(await pdf.save());
+                      showDialog<void>(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: const Text(
+                              'Génération terminée',
+                              style: TextStyle(color: Colors.green),
+                            ),
+                            content: const Text('Votre fichier est disponible'),
+                            actions: <Widget>[
+                              TextButton(
+                                child: const Text('Ok'),
+                                onPressed: () {
+                                  Navigator.of(context).pop();
                                 },
                               ),
-                              actions: <Widget>[
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, 'Cancel'),
-                                  child: const Text('Annuler'),
-                                ),
-                                TextButton(
-                                  onPressed: onSave,
-                                  child: const Text('Enregistrer'),
-                                ),
-                              ],
-                            ),
-                          ),
-                      child: const Icon(Icons.add))),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                    child: Row(children: const [
+                      Icon(Icons.picture_as_pdf),
+                      Text("Grand livre"),
+                    ]),
+                  ),
+                  const SizedBox(
+                    width: 20,
+                  ),
+                  ElevatedButton(
+                    onPressed: () => {},
+                    child: Row(children: const [
+                      Icon(Icons.picture_as_pdf),
+                      Text("Compte de résultat"),
+                    ]),
+                  ),
+                ]),
+              ),
+            ),
+            FormBuilder(
+              key: _datesFormKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: FormBuilderDateTimePicker(
+                      name: 'date_from',
+                      inputType: InputType.date,
+                      initialValue: _dateFrom,
+                      decoration: const InputDecoration(
+                        labelText: 'Du',
+                      ),
+                      validator: FormBuilderValidators.required(context),
+                      onChanged: (DateTime? value) {
+                        setState(() {
+                          _dateFrom = value;
+                          _operationWidgets = OperationRepository.allByDates(
+                              _dateFrom, _dateTo);
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 50.0),
+                  Expanded(
+                    child: FormBuilderDateTimePicker(
+                      name: 'date_to',
+                      inputType: InputType.date,
+                      initialValue: _dateTo,
+                      decoration: const InputDecoration(
+                        labelText: 'Au',
+                      ),
+                      validator: FormBuilderValidators.required(context),
+                      onChanged: (DateTime? value) {
+                        setState(() {
+                          _dateTo = value;
+                          _operationWidgets = OperationRepository.allByDates(
+                              _dateFrom, _dateTo);
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
             FutureBuilder(
               future: _operationWidgets,

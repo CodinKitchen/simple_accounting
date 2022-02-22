@@ -20,9 +20,9 @@ class AccountRepository {
     );
   }
 
-  static void remove(Account account) async {
+  static Future<int> remove(Account account) async {
     final database = await DBHelper.database();
-    database.delete(
+    return database.delete(
       Account.table,
       where: 'id = ?',
       whereArgs: [account.id],
