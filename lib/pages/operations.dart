@@ -6,12 +6,12 @@ import 'package:form_builder_extra_fields/form_builder_extra_fields.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
 import 'package:simple_accouting/database/models/account.dart';
 import 'package:simple_accouting/database/models/operation.dart';
 import 'package:simple_accouting/database/repositoies/account_repository.dart';
 import 'package:simple_accouting/database/repositoies/operation_repository.dart';
+import 'package:simple_accouting/pdf/ledger.dart';
+import 'package:simple_accouting/pdf/profit_and_loss.dart';
 import '../menu.dart';
 
 class OperationsPage extends StatefulWidget {
@@ -22,7 +22,7 @@ class OperationsPage extends StatefulWidget {
 }
 
 class _OperationsPageState extends State<OperationsPage> {
-  late Future<List<Operation>> _operationWidgets;
+  late Future<List<Operation>> _operations;
   late List<Account> _accounts;
   DateTime? _dateFrom =
       DateTime.utc(DateTime.now().year, DateTime.now().month, 1);
@@ -43,7 +43,7 @@ class _OperationsPageState extends State<OperationsPage> {
       operation.profile = 1;
       OperationRepository.save(operation);
       setState(() {
-        _operationWidgets = OperationRepository.allByDates(_dateFrom, _dateTo);
+        _operations = OperationRepository.allByDates(_dateFrom, _dateTo);
       });
     }
     Navigator.pop(context, 'Saved');
@@ -52,14 +52,53 @@ class _OperationsPageState extends State<OperationsPage> {
   void onDelete(Operation operation) async {
     OperationRepository.remove(operation);
     setState(() {
-      _operationWidgets = OperationRepository.allByDates(_dateFrom, _dateTo);
+      _operations = OperationRepository.allByDates(_dateFrom, _dateTo);
     });
+  }
+
+  void generatePdf(String type, List<Operation> operations) async {
+    final documentsPath = await getApplicationDocumentsDirectory();
+    String path = documentsPath.path;
+
+    if (type == 'ledger') {
+      path += "/grand_livre.pdf";
+      final File file = File(path);
+      await file.writeAsBytes(await generateLedger(operations));
+    } else if (type == 'profitAndLoss') {
+      path += "/compte_de_resultat.pdf";
+      final File file = File(path);
+      await file.writeAsBytes(await generateProfitAndLoss(operations));
+    } else {
+      throw Exception('Invalid PDF type');
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Génération terminée',
+            style: TextStyle(color: Colors.green),
+          ),
+          content: Text('Votre fichier $path est disponible'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Ok'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   void initState() {
     super.initState();
-    _operationWidgets = OperationRepository.allByDates(_dateFrom, _dateTo);
+    _operations = OperationRepository.allByDates(_dateFrom, _dateTo);
     AccountRepository.all().then((accounts) => _accounts = accounts);
   }
 
@@ -157,57 +196,44 @@ class _OperationsPageState extends State<OperationsPage> {
                   const SizedBox(
                     width: 20,
                   ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final pdf = pw.Document();
-
-                      pdf.addPage(pw.Page(
-                          pageFormat: PdfPageFormat.a4,
-                          build: (pw.Context context) {
-                            return pw.Center(
-                              child: pw.Text("Hello World"),
-                            );
-                          }));
-                      final documentsPath =
-                          await getApplicationDocumentsDirectory();
-                      final file = File(documentsPath.path + "/grand_live.pdf");
-                      await file.writeAsBytes(await pdf.save());
-                      showDialog<void>(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: const Text(
-                              'Génération terminée',
-                              style: TextStyle(color: Colors.green),
-                            ),
-                            content: const Text('Votre fichier est disponible'),
-                            actions: <Widget>[
-                              TextButton(
-                                child: const Text('Ok'),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                            ],
-                          );
-                        },
-                      );
+                  FutureBuilder(
+                    future: _operations,
+                    builder: (BuildContext context, AsyncSnapshot snapshot) {
+                      if (snapshot.hasData && snapshot.data.length > 0) {
+                        List<Operation> operations = snapshot.data;
+                        return ElevatedButton(
+                          onPressed: () async {
+                            generatePdf('ledger', operations);
+                          },
+                          child: Row(children: const [
+                            Icon(Icons.picture_as_pdf),
+                            Text("Grand livre"),
+                          ]),
+                        );
+                      }
+                      return const SizedBox.shrink();
                     },
-                    child: Row(children: const [
-                      Icon(Icons.picture_as_pdf),
-                      Text("Grand livre"),
-                    ]),
                   ),
                   const SizedBox(
                     width: 20,
                   ),
-                  ElevatedButton(
-                    onPressed: () => {},
-                    child: Row(children: const [
-                      Icon(Icons.picture_as_pdf),
-                      Text("Compte de résultat"),
-                    ]),
+                  FutureBuilder(
+                    future: _operations,
+                    builder: (BuildContext context, AsyncSnapshot snapshot) {
+                      if (snapshot.hasData && snapshot.data.length > 0) {
+                        List<Operation> operations = snapshot.data;
+                        return ElevatedButton(
+                          onPressed: () async {
+                            generatePdf('profitAndLoss', operations);
+                          },
+                          child: Row(children: const [
+                            Icon(Icons.picture_as_pdf),
+                            Text("Compte de résultat"),
+                          ]),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
                   ),
                 ]),
               ),
@@ -230,7 +256,7 @@ class _OperationsPageState extends State<OperationsPage> {
                       onChanged: (DateTime? value) {
                         setState(() {
                           _dateFrom = value;
-                          _operationWidgets = OperationRepository.allByDates(
+                          _operations = OperationRepository.allByDates(
                               _dateFrom, _dateTo);
                         });
                       },
@@ -249,7 +275,7 @@ class _OperationsPageState extends State<OperationsPage> {
                       onChanged: (DateTime? value) {
                         setState(() {
                           _dateTo = value;
-                          _operationWidgets = OperationRepository.allByDates(
+                          _operations = OperationRepository.allByDates(
                               _dateFrom, _dateTo);
                         });
                       },
@@ -259,7 +285,7 @@ class _OperationsPageState extends State<OperationsPage> {
               ),
             ),
             FutureBuilder(
-              future: _operationWidgets,
+              future: _operations,
               builder: (BuildContext context, AsyncSnapshot snapshot) {
                 if (snapshot.hasData) {
                   List<Operation> operations = snapshot.data;
