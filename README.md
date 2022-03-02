@@ -1,5 +1,7 @@
-# simple_accouting
+<a aria-label="License logo" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">
+    <img src="https://img.shields.io/badge/license-CC--BY--BC--SA-blue">
+</a>
 
-[![CC BY-NC-SA](https://mirrors.creativecommons.org/presskit/buttons/80x15/png/by-nc-sa.png)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+# simple_accouting
 
 A cross platform desktop Flutter project for simple accounting operations.
