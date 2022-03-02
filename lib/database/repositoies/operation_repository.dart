@@ -25,7 +25,7 @@ class OperationRepository {
     }
 
     final result = await database.rawQuery(
-        'SELECT o.*, a.name, a.code FROM ${Operation.table} o INNER JOIN ${Account.table} a ON o.account_id = a.id' +
+        'SELECT o.*, a.name AS account_name, a.code AS account_code, a.type AS account_type FROM ${Operation.table} o INNER JOIN ${Account.table} a ON o.account_id = a.id' +
             whereClause,
         whereParams);
     return result.isNotEmpty

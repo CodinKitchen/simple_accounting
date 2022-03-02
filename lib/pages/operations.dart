@@ -45,8 +45,8 @@ class _OperationsPageState extends State<OperationsPage> {
       setState(() {
         _operations = OperationRepository.allByDates(_dateFrom, _dateTo);
       });
+      Navigator.pop(context, 'Saved');
     }
-    Navigator.pop(context, 'Saved');
   }
 
   void onDelete(Operation operation) async {
@@ -170,8 +170,15 @@ class _OperationsPageState extends State<OperationsPage> {
                                     FormBuilderSearchableDropdown(
                                       name: 'account',
                                       items: _accounts,
+                                      itemAsString: (Account? account) {
+                                        return account.toString() +
+                                            ' - ' +
+                                            (account?.type == 'debit'
+                                                ? 'Compte de dépense'
+                                                : 'Compte de remboursement');
+                                      },
                                       decoration: const InputDecoration(
-                                          labelText: 'Searchable Dropdown'),
+                                          labelText: 'Choisissez un compte'),
                                     )
                                   ],
                                 ),
@@ -289,6 +296,17 @@ class _OperationsPageState extends State<OperationsPage> {
               builder: (BuildContext context, AsyncSnapshot snapshot) {
                 if (snapshot.hasData) {
                   List<Operation> operations = snapshot.data;
+                  if (operations.isEmpty) {
+                    return const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Aucune opérations pour la période sélectionnée',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w500, fontSize: 20),
+                        ),
+                      ),
+                    );
+                  }
                   return Expanded(
                       child: ListView.separated(
                           separatorBuilder: (context, index) => const Divider(

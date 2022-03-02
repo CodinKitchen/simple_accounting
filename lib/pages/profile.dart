@@ -42,6 +42,16 @@ class _ProfilePageState extends State<ProfilePage> {
       _profile.initialBalance =
           double.parse(formState.fields['initialBalance']?.value);
       ProfileRepository.save(_profile);
+
+      const snackBar = SnackBar(
+        content: Text('Informations enregistrées'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      );
+
+      // Find the ScaffoldMessenger in the widget tree
+      // and use it to show a SnackBar.
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
   }
 

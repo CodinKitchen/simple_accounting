@@ -7,6 +7,7 @@ class Operation {
   final int? id;
   double? amount;
   DateTime? date;
+  String? name;
   int? profile;
   Account? account;
 
@@ -14,6 +15,7 @@ class Operation {
     this.id,
     this.amount,
     this.date,
+    this.name,
     this.profile,
     this.account,
   });
@@ -22,9 +24,13 @@ class Operation {
         id: data['id'],
         amount: data['amount'],
         date: DateTime.parse(data['date']),
+        name: data['name'],
         profile: data['profile_id'],
         account: Account(
-            id: data['account_id'], code: data['code'], name: data['name']),
+            id: data['account_id'],
+            code: data['account_code'],
+            type: data['account_type'],
+            name: data['account_name']),
       );
 
   Map<String, dynamic> toDatabase() {
@@ -32,6 +38,7 @@ class Operation {
       'id': id,
       'amount': amount,
       'date': DateFormat('yyyy-MM-dd').format(date ?? DateTime.now()),
+      'name': name,
       'profile_id': profile,
       'account_id': account?.id,
     };

@@ -21,7 +21,8 @@ class Migration06022022 {
         CREATE TABLE accounts (
           id INTEGER PRIMARY KEY,
           name TEXT NOT NULL,
-          code TEXT NOT NULL,
+          code TEXT,
+          type TEXT NOT NULL,
           profile_id INTEGER NOT NULL,
           FOREIGN KEY(profile_id) REFERENCES profiles(id)
         )
@@ -32,6 +33,7 @@ class Migration06022022 {
           id INTEGER PRIMARY KEY,
           amount DOUBLE NOT NULL,
           date DATE NOT NULL DEFAULT CURRENT_DATE,
+          name TEXT,
           account_id INTEGER NOT NULL,
           profile_id INTEGER NOT NULL,
           FOREIGN KEY(account_id) REFERENCES accounts(id),

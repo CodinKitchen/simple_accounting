@@ -4,7 +4,6 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:simple_accouting/database/models/account.dart';
 import 'package:simple_accouting/database/repositoies/account_repository.dart';
 import 'package:simple_accouting/menu.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class AccountsPage extends StatefulWidget {
   const AccountsPage({Key? key}) : super(key: key);
@@ -24,13 +23,14 @@ class _AccountsPageState extends State<AccountsPage> {
       Account account = Account();
       account.name = formState.fields['name']?.value;
       account.code = formState.fields['code']?.value;
+      account.type = formState.fields['type']?.value;
       account.profile = 1;
       AccountRepository.save(account);
       setState(() {
         _accounts = AccountRepository.all();
       });
+      Navigator.pop(context, 'Saved');
     }
-    Navigator.pop(context, 'Saved');
   }
 
   void onDelete(Account account) async {
@@ -124,20 +124,36 @@ class _AccountsPageState extends State<AccountsPage> {
                                                     context),
                                             keyboardType: TextInputType.text,
                                           ),
+                                          FormBuilderDropdown(
+                                              name: 'type',
+                                              decoration: const InputDecoration(
+                                                labelText: 'Type de compte',
+                                              ),
+                                              allowClear: true,
+                                              hint: const Text(
+                                                  'Sélectionnez un type'),
+                                              validator: FormBuilderValidators
+                                                  .compose([
+                                                FormBuilderValidators.required(
+                                                    context)
+                                              ]),
+                                              items: const [
+                                                DropdownMenuItem(
+                                                  value: 'debit',
+                                                  child: Text(
+                                                      'Compte de dépenses'),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: 'credit',
+                                                  child: Text(
+                                                      'Compte de remboursement'),
+                                                ),
+                                              ]),
                                           FormBuilderTextField(
                                             name: 'code',
                                             decoration: const InputDecoration(
-                                              labelText: 'Code',
+                                              labelText: 'Code (optionel)',
                                             ),
-                                            validator:
-                                                FormBuilderValidators.compose([
-                                              FormBuilderValidators.required(
-                                                  context),
-                                              FormBuilderValidators.match(
-                                                  context, '^[A-Z]{3}\$',
-                                                  errorText:
-                                                      'Saisissez 3 majuscules')
-                                            ]),
                                             keyboardType: TextInputType.text,
                                           ),
                                         ],
@@ -178,7 +194,12 @@ class _AccountsPageState extends State<AccountsPage> {
                             Account account = accounts[index];
                             return ListTile(
                               title: Text(account.name.toString()),
-                              subtitle: Text(account.code.toString()),
+                              subtitle: Text((account.type == 'debit'
+                                      ? 'Compte de dépense'
+                                      : 'Compte de remboursement') +
+                                  (account.code != null
+                                      ? ' - ' + account.code.toString()
+                                      : '')),
                               trailing: IconButton(
                                 icon: const Icon(Icons.delete),
                                 onPressed: () => onDelete(account),
