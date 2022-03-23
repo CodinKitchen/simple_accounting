@@ -16,11 +16,10 @@ class _AccountsPageState extends State<AccountsPage> {
   late Future<List<Account>> _accounts;
   final _formKey = GlobalKey<FormBuilderState>();
 
-  void onSave() async {
+  void onSave(Account account) async {
     FormBuilderState? formState = _formKey.currentState;
     formState?.save();
     if (formState != null && formState.validate()) {
-      Account account = Account();
       account.name = formState.fields['name']?.value;
       account.code = formState.fields['code']?.value;
       account.type = formState.fields['type']?.value;
@@ -65,6 +64,88 @@ class _AccountsPageState extends State<AccountsPage> {
     });
   }
 
+  void onEdit(Account? account) async {
+    Account currentAccount = account ?? Account();
+    showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Catégorie de compte'),
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(10.0))),
+        content: Builder(
+          builder: (context) {
+            // Get available height and width of the build area of this widget. Make a choice depending on the size.
+            var height = MediaQuery.of(context).size.height;
+            var width = MediaQuery.of(context).size.width;
+
+            return SizedBox(
+              height: height - 400,
+              width: width - 400,
+              child: FormBuilder(
+                key: _formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                child: Column(
+                  children: <Widget>[
+                    FormBuilderTextField(
+                      name: 'name',
+                      decoration: const InputDecoration(
+                        labelText: 'Nom',
+                      ),
+                      initialValue: account?.name,
+                      validator: FormBuilderValidators.required(context),
+                      keyboardType: TextInputType.text,
+                    ),
+                    FormBuilderDropdown(
+                        name: 'type',
+                        decoration: const InputDecoration(
+                          labelText: 'Type de compte',
+                        ),
+                        allowClear: true,
+                        initialValue: account?.type,
+                        hint: const Text('Sélectionnez un type'),
+                        validator: FormBuilderValidators.compose(
+                            [FormBuilderValidators.required(context)]),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'debit',
+                            child: Text('Compte de dépenses'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'credit',
+                            child: Text('Compte de remboursement'),
+                          ),
+                        ]),
+                    FormBuilderTextField(
+                      name: 'code',
+                      initialValue: account?.code,
+                      decoration: const InputDecoration(
+                        labelText: 'Code (optionel)',
+                      ),
+                      keyboardType: TextInputType.text,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'Cancel'),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => onSave(currentAccount),
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+    setState(() {
+      _accounts = AccountRepository.all();
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -90,91 +171,7 @@ class _AccountsPageState extends State<AccountsPage> {
               child: Align(
                   alignment: Alignment.topRight,
                   child: ElevatedButton(
-                      onPressed: () => showDialog<String>(
-                            context: context,
-                            builder: (BuildContext context) => AlertDialog(
-                              title:
-                                  const Text('Ajouter une catégorie de compte'),
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(10.0))),
-                              content: Builder(
-                                builder: (context) {
-                                  // Get available height and width of the build area of this widget. Make a choice depending on the size.
-                                  var height =
-                                      MediaQuery.of(context).size.height;
-                                  var width = MediaQuery.of(context).size.width;
-
-                                  return SizedBox(
-                                    height: height - 400,
-                                    width: width - 400,
-                                    child: FormBuilder(
-                                      key: _formKey,
-                                      autovalidateMode:
-                                          AutovalidateMode.onUserInteraction,
-                                      child: Column(
-                                        children: <Widget>[
-                                          FormBuilderTextField(
-                                            name: 'name',
-                                            decoration: const InputDecoration(
-                                              labelText: 'Nom',
-                                            ),
-                                            validator:
-                                                FormBuilderValidators.required(
-                                                    context),
-                                            keyboardType: TextInputType.text,
-                                          ),
-                                          FormBuilderDropdown(
-                                              name: 'type',
-                                              decoration: const InputDecoration(
-                                                labelText: 'Type de compte',
-                                              ),
-                                              allowClear: true,
-                                              hint: const Text(
-                                                  'Sélectionnez un type'),
-                                              validator: FormBuilderValidators
-                                                  .compose([
-                                                FormBuilderValidators.required(
-                                                    context)
-                                              ]),
-                                              items: const [
-                                                DropdownMenuItem(
-                                                  value: 'debit',
-                                                  child: Text(
-                                                      'Compte de dépenses'),
-                                                ),
-                                                DropdownMenuItem(
-                                                  value: 'credit',
-                                                  child: Text(
-                                                      'Compte de remboursement'),
-                                                ),
-                                              ]),
-                                          FormBuilderTextField(
-                                            name: 'code',
-                                            decoration: const InputDecoration(
-                                              labelText: 'Code (optionel)',
-                                            ),
-                                            keyboardType: TextInputType.text,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              actions: <Widget>[
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, 'Cancel'),
-                                  child: const Text('Annuler'),
-                                ),
-                                TextButton(
-                                  onPressed: onSave,
-                                  child: const Text('Enregistrer'),
-                                ),
-                              ],
-                            ),
-                          ),
+                      onPressed: () => onEdit(null),
                       child: const Icon(Icons.add))),
             ),
             FutureBuilder(
@@ -200,9 +197,18 @@ class _AccountsPageState extends State<AccountsPage> {
                                   (account.code != null
                                       ? ' - ' + account.code.toString()
                                       : '')),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () => onDelete(account),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () => onDelete(account),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    onPressed: () => onEdit(account),
+                                  )
+                                ],
                               ),
                             );
                           }));

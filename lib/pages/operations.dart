@@ -32,11 +32,10 @@ class _OperationsPageState extends State<OperationsPage> {
   final _editFormKey = GlobalKey<FormBuilderState>();
   final _datesFormKey = GlobalKey<FormBuilderState>();
 
-  void onSave() async {
+  void onSave(Operation operation) async {
     FormBuilderState? formState = _editFormKey.currentState;
     formState?.save();
     if (formState != null && formState.validate()) {
-      Operation operation = Operation();
       operation.amount = double.parse(formState.fields['amount']?.value);
       operation.date = formState.fields['date']?.value;
       operation.account = formState.fields['account']?.value;
@@ -54,6 +53,85 @@ class _OperationsPageState extends State<OperationsPage> {
     setState(() {
       _operations = OperationRepository.allByDates(_dateFrom, _dateTo);
     });
+  }
+
+  void onEdit(Operation? operation) async {
+    Operation currentOperation = operation ?? Operation();
+    showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Ajouter une opération'),
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(10.0))),
+        content: Builder(
+          builder: (context) {
+            // Get available height and width of the build area of this widget. Make a choice depending on the size.
+            var height = MediaQuery.of(context).size.height;
+            var width = MediaQuery.of(context).size.width;
+
+            return SizedBox(
+              height: height - 400,
+              width: width - 400,
+              child: FormBuilder(
+                key: _editFormKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                child: Column(
+                  children: <Widget>[
+                    FormBuilderTextField(
+                      name: 'amount',
+                      decoration: const InputDecoration(
+                        labelText: 'Montant',
+                      ),
+                      initialValue: currentOperation.amount != null
+                          ? currentOperation.amount.toString()
+                          : '',
+                      validator: FormBuilderValidators.compose([
+                        FormBuilderValidators.required(context),
+                        FormBuilderValidators.numeric(context)
+                      ]),
+                      keyboardType: TextInputType.text,
+                    ),
+                    FormBuilderDateTimePicker(
+                      name: 'date',
+                      inputType: InputType.date,
+                      decoration: const InputDecoration(
+                        labelText: 'Date de l\'opération',
+                      ),
+                      initialValue: currentOperation.date,
+                      validator: FormBuilderValidators.required(context),
+                    ),
+                    FormBuilderSearchableDropdown(
+                      name: 'account',
+                      items: _accounts,
+                      itemAsString: (Account? account) {
+                        return account.toString() +
+                            ' - ' +
+                            (account?.type == 'debit'
+                                ? 'Compte de dépense'
+                                : 'Compte de remboursement');
+                      },
+                      decoration: const InputDecoration(
+                          labelText: 'Choisissez un compte'),
+                      initialValue: currentOperation.account,
+                    )
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'Cancel'),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => onSave(currentOperation),
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
   }
 
   void generatePdf(String type, List<Operation> operations) async {
@@ -125,79 +203,7 @@ class _OperationsPageState extends State<OperationsPage> {
                     child: Container(),
                   ),
                   ElevatedButton(
-                    onPressed: () => showDialog<String>(
-                      context: context,
-                      builder: (BuildContext context) => AlertDialog(
-                        title: const Text('Ajouter une opération'),
-                        shape: const RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(10.0))),
-                        content: Builder(
-                          builder: (context) {
-                            // Get available height and width of the build area of this widget. Make a choice depending on the size.
-                            var height = MediaQuery.of(context).size.height;
-                            var width = MediaQuery.of(context).size.width;
-
-                            return SizedBox(
-                              height: height - 400,
-                              width: width - 400,
-                              child: FormBuilder(
-                                key: _editFormKey,
-                                autovalidateMode:
-                                    AutovalidateMode.onUserInteraction,
-                                child: Column(
-                                  children: <Widget>[
-                                    FormBuilderTextField(
-                                      name: 'amount',
-                                      decoration: const InputDecoration(
-                                        labelText: 'Montant',
-                                      ),
-                                      validator: FormBuilderValidators.compose([
-                                        FormBuilderValidators.required(context),
-                                        FormBuilderValidators.numeric(context)
-                                      ]),
-                                      keyboardType: TextInputType.text,
-                                    ),
-                                    FormBuilderDateTimePicker(
-                                      name: 'date',
-                                      inputType: InputType.date,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Date de l\'opération',
-                                      ),
-                                      validator: FormBuilderValidators.required(
-                                          context),
-                                    ),
-                                    FormBuilderSearchableDropdown(
-                                      name: 'account',
-                                      items: _accounts,
-                                      itemAsString: (Account? account) {
-                                        return account.toString() +
-                                            ' - ' +
-                                            (account?.type == 'debit'
-                                                ? 'Compte de dépense'
-                                                : 'Compte de remboursement');
-                                      },
-                                      decoration: const InputDecoration(
-                                          labelText: 'Choisissez un compte'),
-                                    )
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        actions: <Widget>[
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, 'Cancel'),
-                            child: const Text('Annuler'),
-                          ),
-                          TextButton(
-                            onPressed: onSave,
-                            child: const Text('Enregistrer'),
-                          ),
-                        ],
-                      ),
-                    ),
+                    onPressed: () => onEdit(null),
                     child: const Icon(Icons.add),
                   ),
                   const SizedBox(
@@ -291,6 +297,9 @@ class _OperationsPageState extends State<OperationsPage> {
                 ],
               ),
             ),
+            const SizedBox(
+              height: 50,
+            ),
             FutureBuilder(
               future: _operations,
               builder: (BuildContext context, AsyncSnapshot snapshot) {
@@ -308,30 +317,42 @@ class _OperationsPageState extends State<OperationsPage> {
                     );
                   }
                   return Expanded(
-                      child: ListView.separated(
-                          separatorBuilder: (context, index) => const Divider(
-                                color: Colors.black,
-                              ),
-                          scrollDirection: Axis.vertical,
-                          shrinkWrap: true,
-                          itemCount: operations.length,
-                          itemBuilder: (context, index) {
-                            Operation operation = operations[index];
-                            final operationDate =
-                                operation.date ?? DateTime.now();
-                            return ListTile(
-                              title: Text(operation.account.toString()),
-                              subtitle: Text(operation.amount.toString() +
-                                  "€" +
-                                  " - " +
-                                  DateFormat('yyyy-MM-dd')
-                                      .format(operationDate)),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () => onDelete(operation),
-                              ),
-                            );
-                          }));
+                    child: DataTable(
+                      columns: const [
+                        DataColumn(label: Text("Date")),
+                        DataColumn(label: Text("Opération")),
+                        DataColumn(label: Text("Dépenses")),
+                        DataColumn(label: Text("Recettes")),
+                        DataColumn(label: Text("Actions")),
+                      ],
+                      rows: operations
+                          .map((Operation operation) => DataRow(cells: [
+                                DataCell(Text(DateFormat('yyyy-MM-dd')
+                                    .format(operation.date ?? DateTime.now()))),
+                                DataCell(Text(operation.account?.name ?? '')),
+                                DataCell(Text(operation.account?.type == 'debit'
+                                    ? operation.amount.toString()
+                                    : '')),
+                                DataCell(Text(
+                                    operation.account?.type == 'credit'
+                                        ? operation.amount.toString()
+                                        : '')),
+                                DataCell(Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.delete),
+                                        onPressed: () => onDelete(operation),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.edit),
+                                        onPressed: () => onEdit(operation),
+                                      )
+                                    ]))
+                              ]))
+                          .toList(),
+                    ),
+                  );
                 } else if (snapshot.hasError) {
                   return Text("${snapshot.error}");
                 }
